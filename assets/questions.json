@@ -1,0 +1,105 @@
+{
+	"questions": [
+		{
+			"question": "What are dart defines used for in Flutter?",
+			"answers": [
+				"To store compile-time constants without hardcoding them in the source code",
+				"To store compile-time constants that affect your Dart code only",
+				"To store compile-time constants that affect both your Dart code and native platform code",
+				"To securely store encrypted data on device"
+			],
+			"correct": [1, 2]
+		},
+		{
+			"question": "Which mixin is used to synchronize the UI with the refresh rate of the device?",
+			"answers": [
+				"AutomaticKeepAliveClientMixin",
+				"SingleTickerProviderStateMixin",
+				"ViewportElementMixin",
+				"RestorationMixin"
+			],
+			"correct": [2]
+		},    
+		{
+			"question": "What are common usages of the BuildContext in Flutter?",
+			"answers": [
+				"To access ancestor widgets in the widget tree",
+				"To store build configuration settings",
+				"To access localizations strings for the current locale",
+				"To handle platform-specific code"
+			],
+			"correct": [1,3]
+		},
+		{
+			"question": "What is the purpose of the mounted property?",
+			"answers": [
+				"To check if a widget has been initialized",
+				"To check if a widget has state",
+				"To check if a widget is visible",
+				"To check if a widget is currently in the widget tree"
+			],
+			"correct": [4]
+		},
+		{
+			"question": "Which widgets should you use to create a scrollable collection of items?",
+			"answers": [
+				"Column",
+				"ListView",
+				"Stack",
+				"GridView"
+			],
+			"correct": [2,4]
+		},
+		{
+			"question": "When should you use the required keyword in a function parameter list?",
+			"answers": [
+				"For positional non-nullable parameters",
+				"For named non-nullable parameters with a default value",
+				"For named non-nullable parameters without a default value",
+				"For constant parameters"
+			],
+			"correct": [3]
+		},    
+		{
+			"question": "Which of the following statements are true about StatelessWidget and StatefulWidget?",
+			"answers": [
+				"StatelessWidget doesn't have a setState method",
+				"StatefulWidget rebuilds itself and all descendant widgets when its state changes",
+				"StatefulWidget holds mutable state within its State object",
+				"StatelessWidget only ever rebuilds when its parent is rebuilt"
+			],
+			"correct": [1,3]
+		},
+		{
+			"question": "What is the purpose of the didUpdateWidget() method?",
+			"answers": [
+				"To initialize the widget",
+				"To respond to widget configuration changes",
+				"To rebuild the widget",
+				"To dispose of resources"
+			],
+			"correct": [2]
+		},
+		{
+			"question": "What is the purpose of the analysis_options.yaml file?",
+			"answers": [
+				"To define the code generation order",
+				"To enable/disable linter rules",
+				"To enable experimental analyzer plugins",
+				"To define the packages used in the project"
+			],
+			"correct": [2,3]
+		},
+		{
+			"question": "What is the difference between debugPrint() and print()?",
+			"answers": [
+				"print is only available in debug mode",
+				"debugPrint is only available in release mode",
+				"debugPrint throttles output to prevent lag",
+				"There is no difference"
+			],
+			"correct": [3]
+		}
+	]
+}
+
