@@ -100,7 +100,7 @@ class _QuizQuestionState extends State<QuizQuestion> {
               itemCount: currentQuestion.answers.length,
               itemBuilder: (context, index) {
                 return QuizRadioListTile(
-                  key: UniqueKey(),
+                  key: ValueKey('q_${previousAnswers.length}_a_$index'),
                   answer: currentQuestion.answers.elementAt(index),
                   currentIndex: index,
                   selectedIndex: currentAnswers.firstOrNull,
@@ -116,7 +116,7 @@ class _QuizQuestionState extends State<QuizQuestion> {
               itemCount: currentQuestion.answers.length,
               itemBuilder: (context, index) {
                 return QuizCheckboxListTile(
-                  key: UniqueKey(),
+                  key: ValueKey('q_${previousAnswers.length}_a_$index'),
                   answer: currentQuestion.answers.elementAt(index),
                   isSelected: currentAnswers.contains(index),
                   onChanged: (bool value) {
