@@ -34,7 +34,6 @@ class _QuizQuestionState extends State<QuizQuestion> {
     // Comment out to disable shuffling
     ..shuffle();
 
-  // TODO: bind these state variables to the UI and update them when answers are submitted
   // All the previous answers for the quiz
   // This is a List<List<int>> because there are multiple questions and a single question can have multiple answers
   List<List<int>> previousAnswers = [];
@@ -76,6 +75,7 @@ class _QuizQuestionState extends State<QuizQuestion> {
   @override
   Widget build(BuildContext context) {
     final currentQuestion = shuffledQuestions[previousAnswers.length];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -95,8 +95,46 @@ class _QuizQuestionState extends State<QuizQuestion> {
         ),
         // * Body (answers)
         Expanded(
-          // TODO: Add UI for showing the answers
-          child: Placeholder(),
+          child: switch (currentQuestion.correct.length) {
+            1 => ListView.builder(
+              itemCount: currentQuestion.answers.length,
+              itemBuilder: (context, index) {
+                return QuizRadioListTile(
+                  key: UniqueKey(),
+                  answer: currentQuestion.answers.elementAt(index),
+                  currentIndex: index,
+                  selectedIndex: currentAnswers.firstOrNull,
+                  onChanged: (int value) {
+                    setState(() => currentAnswers = [value]);
+                  },
+                  isVerifying: isVerifying,
+                  isCorrect: currentQuestion.correct.contains(index),
+                );
+              },
+            ),
+            _ => ListView.builder(
+              itemCount: currentQuestion.answers.length,
+              itemBuilder: (context, index) {
+                return QuizCheckboxListTile(
+                  key: UniqueKey(),
+                  answer: currentQuestion.answers.elementAt(index),
+                  isSelected: currentAnswers.contains(index),
+                  onChanged: (bool value) {
+                    setState(() {
+                      switch (value) {
+                        case true:
+                          currentAnswers.add(index);
+                        case false:
+                          currentAnswers.remove(index);
+                      }
+                    });
+                  },
+                  isVerifying: isVerifying,
+                  isCorrect: currentQuestion.correct.contains(index),
+                );
+              },
+            ),
+          },
         ),
         // * Footer (submit button)
         ColoredBox(
@@ -105,15 +143,37 @@ class _QuizQuestionState extends State<QuizQuestion> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24.0),
             child: ElevatedButton(
-              // TODO: Implement logic to submit / go to the next question
-              onPressed: null,
+              onPressed:
+                  currentAnswers.isEmpty
+                      ? null
+                      : () {
+                        setState(() {
+                          if (!isVerifying) {
+                            isVerifying = true;
+                            return;
+                          }
+
+                          if (onLastQuestion) {
+                            previousAnswers = [];
+                            currentAnswers = [];
+                            isVerifying = false;
+                            return;
+                          }
+
+                          previousAnswers.add(currentAnswers);
+                          currentAnswers = [];
+                          isVerifying = false;
+                        });
+                      },
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  // TODO: Show "Submit", "Next Question" or "Try Again" depending on the state
-                  'Submit',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                child: Text(switch (!isVerifying) {
+                  true => 'Submit',
+                  false => switch (onLastQuestion) {
+                    true => 'Try Again',
+                    false => 'Next Question',
+                  },
+                }, style: Theme.of(context).textTheme.titleLarge),
               ),
             ),
           ),
@@ -177,16 +237,32 @@ class QuizRadioListTile extends StatelessWidget {
   });
   final String answer;
   final int currentIndex;
-  final int selectedIndex;
+  final int? selectedIndex;
   final ValueChanged<int>? onChanged;
   final bool isVerifying;
   final bool isCorrect;
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Implement with RadioListTile
-    // https://api.flutter.dev/flutter/material/RadioListTile/RadioListTile.html
-    return Placeholder();
+    return RadioListTile<int>(
+      enabled: !isVerifying,
+      value: currentIndex,
+      title: Text(answer, style: Theme.of(context).textTheme.titleMedium),
+      // ignore: deprecated_member_use
+      groupValue: selectedIndex,
+      // ignore: deprecated_member_use
+      onChanged: (value) {
+        if (onChanged != null) onChanged!.call(value!);
+      },
+
+      tileColor: switch (isVerifying) {
+        false => null,
+        true => switch (isCorrect) {
+          true => Colors.green,
+          false => currentIndex == selectedIndex ? Colors.red : null,
+        },
+      },
+    );
   }
 }
 
@@ -208,8 +284,21 @@ class QuizCheckboxListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Implement with CheckboxListTile
-    // https://api.flutter.dev/flutter/material/CheckboxListTile-class.html
-    return Placeholder();
+    return CheckboxListTile(
+      controlAffinity: ListTileControlAffinity.leading,
+      enabled: !isVerifying,
+      onChanged: (value) {
+        onChanged?.call(value!);
+      },
+      value: isSelected,
+      title: Text(answer, style: Theme.of(context).textTheme.titleMedium),
+      tileColor: switch (isVerifying) {
+        false => null,
+        true => switch (isCorrect) {
+          true => Colors.green,
+          false => isSelected ? Colors.red : null,
+        },
+      },
+    );
   }
 }
