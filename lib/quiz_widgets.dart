@@ -1,4 +1,5 @@
 import 'package:c008_quiz_app/app_colors.dart';
+import 'package:c008_quiz_app/confetti.dart';
 import 'package:c008_quiz_app/models.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -218,11 +219,7 @@ class _QuizQuestionState extends State<QuizQuestion> {
             ),
           ],
         ),
-        ConfettiWidget(
-          confettiController: confettiController,
-          numberOfParticles: 100,
-          blastDirectionality: BlastDirectionality.explosive,
-        ),
+        ConfettiWrapper(confettiController: confettiController),
       ],
     );
   }
