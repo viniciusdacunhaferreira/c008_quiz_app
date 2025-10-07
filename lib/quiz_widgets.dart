@@ -36,11 +36,9 @@ class _QuizQuestionState extends State<QuizQuestion> {
   late ConfettiController confettiController;
 
   // all questions shuffled in random order
-  late final List<Question> shuffledQuestions = List.from(
-    widget.quiz.questions,
-  );
-  // Comment out to disable shuffling
-  // ..shuffle();
+  late final List<Question> shuffledQuestions = List.from(widget.quiz.questions)
+    // Comment out to disable shuffling
+    ..shuffle();
 
   // All the previous answers for the quiz
   // This is a List<List<int>> because there are multiple questions and a single question can have multiple answers
