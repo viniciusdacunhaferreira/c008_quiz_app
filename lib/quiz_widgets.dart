@@ -1,3 +1,4 @@
+import 'package:c008_quiz_app/app_colors.dart';
 import 'package:c008_quiz_app/models.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -370,13 +371,11 @@ class QuizRadioListTile extends StatelessWidget {
         if (onChanged != null) onChanged!.call(value!);
       },
 
-      tileColor: switch (isVerifying) {
-        false => null,
-        true => switch (isCorrect) {
-          true => Colors.green,
-          false => currentIndex == selectedIndex ? Colors.red : null,
-        },
-      },
+      tileColor: AppColors.getTileColor(
+        isVerifying: isVerifying,
+        isCorrect: isCorrect,
+        isSelected: currentIndex == selectedIndex,
+      ),
     );
   }
 }
@@ -407,13 +406,11 @@ class QuizCheckboxListTile extends StatelessWidget {
       },
       value: isSelected,
       title: Text(answer, style: Theme.of(context).textTheme.titleMedium),
-      tileColor: switch (isVerifying) {
-        false => null,
-        true => switch (isCorrect) {
-          true => Colors.green,
-          false => isSelected ? Colors.red : null,
-        },
-      },
+      tileColor: AppColors.getTileColor(
+        isVerifying: isVerifying,
+        isCorrect: isCorrect,
+        isSelected: isSelected,
+      ),
     );
   }
 }
