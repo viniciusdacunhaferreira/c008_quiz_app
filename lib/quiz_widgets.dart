@@ -1,5 +1,9 @@
+import 'package:c008_quiz_app/app_colors.dart';
+import 'package:c008_quiz_app/confetti.dart';
 import 'package:c008_quiz_app/models.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 class QuizPage extends StatelessWidget {
   const QuizPage({super.key, required this.quiz});
@@ -29,17 +33,18 @@ class QuizQuestion extends StatefulWidget {
 }
 
 class _QuizQuestionState extends State<QuizQuestion> {
+  late ConfettiController confettiController;
+
   // all questions shuffled in random order
   late final List<Question> shuffledQuestions = List.from(widget.quiz.questions)
     // Comment out to disable shuffling
     ..shuffle();
 
-  // TODO: bind these state variables to the UI and update them when answers are submitted
   // All the previous answers for the quiz
   // This is a List<List<int>> because there are multiple questions and a single question can have multiple answers
-  List<List<int>> previousAnswers = [];
+  List<List<int?>> previousAnswers = [];
   // selected answers for the current question
-  List<int> currentAnswers = [];
+  List<int?> currentAnswers = [];
   // false during answer selection, true during answer verification
   bool isVerifying = false;
 
@@ -59,7 +64,7 @@ class _QuizQuestionState extends State<QuizQuestion> {
     return correctAnswersCount(allAnswers);
   }
 
-  int correctAnswersCount(List<List<int>> allAnswers) {
+  int correctAnswersCount(List<List<int?>> allAnswers) {
     assert(allAnswers.length == shuffledQuestions.length);
     int correct = 0;
     for (int i = 0; i < shuffledQuestions.length; i++) {
@@ -73,68 +78,224 @@ class _QuizQuestionState extends State<QuizQuestion> {
     return correct;
   }
 
+  void onTimeElapsed() {
+    setState(() {
+      if (currentAnswers.isEmpty) currentAnswers = [null];
+      isVerifying = true;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    confettiController = ConfettiController(duration: Durations.long4);
+  }
+
+  @override
+  void dispose() {
+    confettiController.dispose();
+
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentQuestion = shuffledQuestions[previousAnswers.length];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+
+    return Stack(
+      alignment: Alignment.topCenter,
       children: [
-        // * Header (question and progress)
-        ColoredBox(
-          // Use surface color (not transparent) to avoid scrollable content appearing below the header
-          color: Theme.of(context).colorScheme.surface,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0),
-            child: QuizQuestionProgress(
-              completedCount: previousAnswers.length,
-              totalCount: widget.quiz.questions.length,
-              correctCount: correctAnswersCountMaybe(),
-              question: currentQuestion.question,
-            ),
-          ),
-        ),
-        // * Body (answers)
-        Expanded(
-          // TODO: Add UI for showing the answers
-          child: Placeholder(),
-        ),
-        // * Footer (submit button)
-        ColoredBox(
-          // Use surface color (not transparent) to avoid scrollable content appearing below the header
-          color: Theme.of(context).colorScheme.surface,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0),
-            child: ElevatedButton(
-              // TODO: Implement logic to submit / go to the next question
-              onPressed: null,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // * Header (question and progress)
+            ColoredBox(
+              // Use surface color (not transparent) to avoid scrollable content appearing below the header
+              color: Theme.of(context).colorScheme.surface,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  // TODO: Show "Submit", "Next Question" or "Try Again" depending on the state
-                  'Submit',
-                  style: Theme.of(context).textTheme.titleLarge,
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: QuizQuestionProgress(
+                  completedCount: previousAnswers.length,
+                  totalCount: widget.quiz.questions.length,
+                  correctCount: correctAnswersCountMaybe(),
+                  question: currentQuestion.question,
+                  onTimeElapsed: onTimeElapsed,
+                  isVerifying: isVerifying,
                 ),
               ),
             ),
-          ),
+            // * Body (answers)
+            Expanded(
+              child: switch (currentQuestion.correct.length) {
+                1 => ListView.builder(
+                  itemCount: currentQuestion.answers.length,
+                  itemBuilder: (context, index) {
+                    return QuizRadioListTile(
+                      key: ValueKey('q_${previousAnswers.length}_a_$index'),
+                      answer: currentQuestion.answers.elementAt(index),
+                      currentIndex: index,
+                      selectedIndex: currentAnswers.firstOrNull,
+                      onChanged: (int value) {
+                        setState(() => currentAnswers = [value]);
+                      },
+                      isVerifying: isVerifying,
+                      isCorrect: currentQuestion.correct.contains(index),
+                    );
+                  },
+                ),
+                _ => ListView.builder(
+                  itemCount: currentQuestion.answers.length,
+                  itemBuilder: (context, index) {
+                    return QuizCheckboxListTile(
+                      key: ValueKey('q_${previousAnswers.length}_a_$index'),
+                      answer: currentQuestion.answers.elementAt(index),
+                      isSelected: currentAnswers.contains(index),
+                      onChanged: (bool value) {
+                        setState(() {
+                          switch (value) {
+                            case true:
+                              currentAnswers.add(index);
+                            case false:
+                              currentAnswers.remove(index);
+                          }
+                        });
+                      },
+                      isVerifying: isVerifying,
+                      isCorrect: currentQuestion.correct.contains(index),
+                    );
+                  },
+                ),
+              },
+            ),
+            // * Footer (submit button)
+            ColoredBox(
+              // Use surface color (not transparent) to avoid scrollable content appearing below the header
+              color: Theme.of(context).colorScheme.surface,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: ElevatedButton(
+                  onPressed:
+                      currentAnswers.isEmpty
+                          ? null
+                          : () {
+                            setState(() {
+                              if (!isVerifying) {
+                                isVerifying = true;
+                                return;
+                              }
+
+                              if (onLastQuestion) {
+                                previousAnswers = [];
+                                currentAnswers = [];
+                                isVerifying = false;
+                                return;
+                              }
+
+                              previousAnswers.add(currentAnswers);
+                              currentAnswers = [];
+                              isVerifying = false;
+                            });
+
+                            if (correctAnswersCountMaybe() ==
+                                widget.quiz.questions.length) {
+                              confettiController.play();
+                            }
+                          },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(switch (!isVerifying) {
+                      true => 'Submit',
+                      false => switch (onLastQuestion) {
+                        true => 'Try Again',
+                        false => 'Next Question',
+                      },
+                    }, style: Theme.of(context).textTheme.titleLarge),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
+        ConfettiWrapper(confettiController: confettiController),
       ],
     );
   }
 }
 
-class QuizQuestionProgress extends StatelessWidget {
+class QuizQuestionProgress extends StatefulWidget {
   const QuizQuestionProgress({
     super.key,
     required this.completedCount,
     required this.totalCount,
     required this.correctCount,
     required this.question,
+    this.onTimeElapsed,
+    required this.isVerifying,
   });
   final int completedCount;
   final int totalCount;
   final int? correctCount;
   final String question;
+  final void Function()? onTimeElapsed;
+  final bool isVerifying;
+
+  @override
+  State<QuizQuestionProgress> createState() => _QuizQuestionProgressState();
+}
+
+class _QuizQuestionProgressState extends State<QuizQuestionProgress>
+    with SingleTickerProviderStateMixin {
+  final Duration _timer = const Duration(seconds: 10);
+  late Duration _rainingTime;
+  late int _remainingTimeInSeconds;
+
+  late final Ticker _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _rainingTime = _timer;
+    _remainingTimeInSeconds = _rainingTime.inSeconds;
+
+    _ticker = createTicker((elapsed) {
+      _rainingTime = _timer - elapsed;
+
+      if (_remainingTimeInSeconds !=
+          (_rainingTime.inMilliseconds / 1000).ceil()) {
+        setState(() {
+          _remainingTimeInSeconds = (_rainingTime.inMilliseconds / 1000).ceil();
+        });
+      }
+      if (_remainingTimeInSeconds == 0) {
+        widget.onTimeElapsed?.call();
+        _ticker.stop();
+        return;
+      }
+    })..start();
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant QuizQuestionProgress oldWidget) {
+    if (oldWidget.question != widget.question) {
+      _rainingTime = _timer;
+      _remainingTimeInSeconds = _rainingTime.inSeconds;
+      _ticker.stop();
+      _ticker.start();
+    } else if (oldWidget.isVerifying != widget.isVerifying) {
+      _ticker.stop();
+    }
+
+    super.didUpdateWidget(oldWidget);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,21 +305,31 @@ class QuizQuestionProgress extends StatelessWidget {
         Row(
           children: [
             Text(
-              'Question ${completedCount + 1} of $totalCount',
+              'Question ${widget.completedCount + 1} of ${widget.totalCount}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const Spacer(),
-            if (correctCount != null)
+            if (widget.correctCount != null)
               Text(
-                'You scored $correctCount out of $totalCount (${(correctCount! / totalCount * 100).round()}%)',
+                'You scored ${widget.correctCount} out of ${widget.totalCount} (${(widget.correctCount! / widget.totalCount * 100).round()}%)',
                 style: Theme.of(context).textTheme.titleMedium,
+              ),
+            if (widget.correctCount == null)
+              Text(
+                _remainingTimeInSeconds == 0
+                    ? 'Time\'s up!'
+                    : widget.isVerifying
+                    ? ''
+                    : 'Reaming time: ${_remainingTimeInSeconds}s',
               ),
           ],
         ),
         SizedBox(height: 8),
-        LinearProgressIndicator(value: (completedCount + 1) / totalCount),
+        LinearProgressIndicator(
+          value: (widget.completedCount + 1) / widget.totalCount,
+        ),
         SizedBox(height: 24),
-        Text(question, style: Theme.of(context).textTheme.titleLarge),
+        Text(widget.question, style: Theme.of(context).textTheme.titleLarge),
       ],
     );
   }
@@ -177,16 +348,30 @@ class QuizRadioListTile extends StatelessWidget {
   });
   final String answer;
   final int currentIndex;
-  final int selectedIndex;
+  final int? selectedIndex;
   final ValueChanged<int>? onChanged;
   final bool isVerifying;
   final bool isCorrect;
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Implement with RadioListTile
-    // https://api.flutter.dev/flutter/material/RadioListTile/RadioListTile.html
-    return Placeholder();
+    return RadioListTile<int>(
+      enabled: !isVerifying,
+      value: currentIndex,
+      title: Text(answer, style: Theme.of(context).textTheme.titleMedium),
+      // ignore: deprecated_member_use
+      groupValue: selectedIndex,
+      // ignore: deprecated_member_use
+      onChanged: (value) {
+        if (onChanged != null) onChanged!.call(value!);
+      },
+
+      tileColor: AppColors.getTileColor(
+        isVerifying: isVerifying,
+        isCorrect: isCorrect,
+        isSelected: currentIndex == selectedIndex,
+      ),
+    );
   }
 }
 
@@ -208,8 +393,19 @@ class QuizCheckboxListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Implement with CheckboxListTile
-    // https://api.flutter.dev/flutter/material/CheckboxListTile-class.html
-    return Placeholder();
+    return CheckboxListTile(
+      controlAffinity: ListTileControlAffinity.leading,
+      enabled: !isVerifying,
+      onChanged: (value) {
+        onChanged?.call(value!);
+      },
+      value: isSelected,
+      title: Text(answer, style: Theme.of(context).textTheme.titleMedium),
+      tileColor: AppColors.getTileColor(
+        isVerifying: isVerifying,
+        isCorrect: isCorrect,
+        isSelected: isSelected,
+      ),
+    );
   }
 }
